@@ -1,0 +1,733 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Welcome to Pomeranian’s documentation! &#8212; Pomeranian  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="welcome-to-pomeranian-s-documentation">
+<h1>Welcome to Pomeranian’s documentation!<a class="headerlink" href="#welcome-to-pomeranian-s-documentation" title="Permalink to this heading">¶</a></h1>
+</section>
+<section id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this heading">¶</a></h1>
+<p>The Pomeranian package allows users to calculate derivatives of complicated differential equations to machine precision! The user can choose either of forward mode differentiation or reverse mode differentiation for their calculations.</p>
+<p>The calculation of derivatives is integral to many problems across disciplines. For instance, the calculation of derivatives is necessary for training deep neural networks (i.e., in back propogation), optimizing functions, building economic models, modeling disease spread (e.g., of COVID-19), and examining change in complex systems over time (e.g., physical systems, biological systems). Pomeranian provides a method to solve complicated differential equations being especially useful for cases where symbolic differentiation or numerical approximations are infeasible or inaccurate respectively.</p>
+</section>
+<section id="motivation-for-automatic-differentiation">
+<h1>Motivation for Automatic Differentiation<a class="headerlink" href="#motivation-for-automatic-differentiation" title="Permalink to this heading">¶</a></h1>
+<p>Automatic differentiation is often contrasted with other methods for calculating derivations such as the finite-difference method, which is a numerical method for approximating the solution to differential equations. The finite-difference method relies on the definition of a derivative to approximate its solution:</p>
+<div class="math notranslate nohighlight">
+\[\frac{df}{dx} = \lim\limits_{\epsilon \to 0} \frac{f(x+\epsilon)-f(x)}{\epsilon}\]</div>
+<p>Of note, the finite-difference method relies on choosing the best <span class="math notranslate nohighlight">\(\epsilon\)</span> value, and it is unclear how to do so. Poorly-chosen <span class="math notranslate nohighlight">\(\epsilon\)</span> values may cause inaccurate approximations or instability of solutions (e.g., due to floating point errors).</p>
+<p>Another potential method of finding derivatives in real-world applications is symbolic differentiation, which works directly with mathematical equations. However, there are important limitations to this method as well. Specifically, symbolic differentiation can be too computationally costly when functions become highly complex, is a very memory-intensive process, and may not always be applicable depending on the exact form of the function.</p>
+<p>These limitations motivate the use of <strong>automatic differentiation (AD)</strong>. AD is a method that is capable of evaluating the derivative of a function specified by a computer program at machine precision, which does not rely entirely on symoblic math (like symbolic differentiation) nor on evaluating the original function at sample points (like the finite-difference method). Rather, AD uses the chain rule to break complex functions into smaller pieces and evaluates only elementary operations at each step. Thus, AD is more easily applicable to a wide range of complex functions suitable for use in real-life applications.</p>
+<p>Our package <code class="docutils literal notranslate"><span class="pre">Pomeranian</span></code> is a <a class="reference external" href="https://pypi.org/">PyPI</a>-distributed Python library to perform AD. Just as pomeranians are known for their intelligence, friendliness, and confidence in tackling challenging problems (e.g., taking on big dogs despite their small size), our package is user-friendly, powerful, and able to compute solutions to complex problems using simple/elementary operations.</p>
+<p>Below, we describe the mathematical background and concepts underlying AD, as well as the usage, software organization, implementation, and licensing of our <code class="docutils literal notranslate"><span class="pre">Pomeranian</span></code> package.</p>
+</section>
+<section id="background">
+<h1>Background<a class="headerlink" href="#background" title="Permalink to this heading">¶</a></h1>
+<section id="chain-rule">
+<h2>Chain rule<a class="headerlink" href="#chain-rule" title="Permalink to this heading">¶</a></h2>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Chain_rule">Chain rule</a> is at the heart of automatic differentiation. It enables us to decompose complex functions into piecewise evaluation.
+Suppose that we have a function <span class="math notranslate nohighlight">\(g(h(x))\)</span>. We could apply chain rule to calculate the derivative of g with respect to t:</p>
+<div class="math notranslate nohighlight">
+\[\frac{dg}{dx} = \frac{\partial g}{\partial h}\frac{\partial h}{\partial x}\]</div>
+<p>Chain rule can also be used in a high dimensional scenario. If we have a function <span class="math notranslate nohighlight">\(g(h(x))\)</span> where <span class="math notranslate nohighlight">\(h \in R^n\)</span> and <span class="math notranslate nohighlight">\(x \in R^m\)</span>. The derivative can be expressed as a gradient vector:</p>
+<div class="math notranslate nohighlight">
+\[\nabla_xg=\sum_{{i=1}^{n}}\frac{\partial g}{\partial h_i}\nabla h_i(x)\]</div>
+</section>
+<section id="elementary-functions">
+<h2>Elementary functions<a class="headerlink" href="#elementary-functions" title="Permalink to this heading">¶</a></h2>
+<p>A complex function could be broken down into elementary functions in order to evaluate them piecewise. <a class="reference external" href="https://en.wikipedia.org/wiki/Elementary_function">Elementary functions</a> is a function of a single variable that is defined as taking sums, products, roots, and other functions.</p>
+</section>
+<section id="forward-mode">
+<h2>Forward mode<a class="headerlink" href="#forward-mode" title="Permalink to this heading">¶</a></h2>
+<p>In forward mode, we evaluate the intermediate results <span class="math notranslate nohighlight">\(v_i\)</span> and the directional derivative at the same time.</p>
+</section>
+<section id="evaluation-trace">
+<h2>Evaluation trace<a class="headerlink" href="#evaluation-trace" title="Permalink to this heading">¶</a></h2>
+<p>The evaluation of a function involves partial ordering of the operations associated with f, forming a evaluation trace. The evaluation trace introduces intermediate results <span class="math notranslate nohighlight">\(v_i\)</span> that elementary functions could operate on. These intermediate results depend on independent variables.</p>
+</section>
+<section id="computational-graph">
+<h2>Computational graph<a class="headerlink" href="#computational-graph" title="Permalink to this heading">¶</a></h2>
+<p>We could visualize the evaluation trace as a computational graph, with each intermediate variable as a node and each elementary function as a edge. For example, the computational graph for <span class="math notranslate nohighlight">\(f(x, y)=e^{sin(x)-cos(y)^2}\)</span> looks like the graph below:</p>
+<img alt="_images/Computational_graph_example_new.png" src="_images/Computational_graph_example_new.png" />
+</section>
+<section id="directional-derivative-and-seed-vector">
+<h2>Directional derivative and seed vector<a class="headerlink" href="#directional-derivative-and-seed-vector" title="Permalink to this heading">¶</a></h2>
+<p>In the computational graph for the forward mode, each node not only carries the evaluation of intermediate variable, but also a directional derivative of the intermediate variable in a given direction <span class="math notranslate nohighlight">\(p \in R^m\)</span>. These two operations happen simultaneously and are termed as the primal trace and the tangent trace. The directional derivative is calculated by projecting the gradient vector into the direction of the seed vector <span class="math notranslate nohighlight">\(p\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[D_pg_i \stackrel{\text{def}}{=}   \nabla_xg=\sum_{{i=1}^{n}}\frac{\partial g}{\partial h_i}\nabla h_i(x)\]</div>
+<p>In other words, the forward mode AD computes the inner product of the Jacobian with the seed vector p (<span class="math notranslate nohighlight">\(J \in R^{n \cdot m}, p \in R^m\)</span>)</p>
+<div class="math notranslate nohighlight">
+\[J \cdot p\]</div>
+<p>which can be interpreted as projecting Jacobian in the direction given by p. The full Jacobian can be calculated in forward mode AD using <span class="math notranslate nohighlight">\(m\)</span> passes, where seed vectors p are set to the m-th unit vector along coordinate <span class="math notranslate nohighlight">\(x_m\)</span> for the m-th pass.</p>
+<p>The evaluation trace of function <span class="math notranslate nohighlight">\(f(x, y)=e^{sin(x)-cos(y)^2}\)</span> at <span class="math notranslate nohighlight">\((x,y)=(\pi/2, \pi/3)\)</span> is as the table follows:</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Trace</p></th>
+<th class="head"><p>Elementary Function</p></th>
+<th class="head"><p>Value</p></th>
+<th class="head"><p>Elementary Function Derivative</p></th>
+<th class="head"><p><span class="math notranslate nohighlight">\(\nabla x\)</span> value</p></th>
+<th class="head"><p><span class="math notranslate nohighlight">\(\nabla y\)</span> value</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(x\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(\pi/2\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(\pi/2\)</span></p></td>
+<td><p>1</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="math notranslate nohighlight">\(y\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(\pi/3\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(\pi/3\)</span></p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(v_1\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(sin(x)\)</span></p></td>
+<td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(cos(x)D_pv_1\)</span></p></td>
+<td><p>0</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="math notranslate nohighlight">\(v_2\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(cos(y)\)</span></p></td>
+<td><p>0.5</p></td>
+<td><p><span class="math notranslate nohighlight">\(-sin(y)D_pv_2\)</span></p></td>
+<td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(-\sqrt{3}/2\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(v_3\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(v_2^2\)</span></p></td>
+<td><p>0.25</p></td>
+<td><p><span class="math notranslate nohighlight">\(2v_2D_pv_3\)</span></p></td>
+<td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(-\sqrt{3}\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="math notranslate nohighlight">\(v_4\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(-v_3\)</span></p></td>
+<td><p>-0.25</p></td>
+<td><p><span class="math notranslate nohighlight">\(-D_pv_4\)</span></p></td>
+<td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sqrt{3}\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(v_5\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(v_1+v_4\)</span></p></td>
+<td><p>-0.25</p></td>
+<td><p><span class="math notranslate nohighlight">\(D_pv_1+D_pv_4\)</span></p></td>
+<td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sqrt{3}\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="math notranslate nohighlight">\(v_6\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(e^{v_5}\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(e^{-0.25}\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(e^{v_5}D_pv_5\)</span></p></td>
+<td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sqrt{3}e^{\sqrt{3}}\)</span></p></td>
+</tr>
+</tbody>
+</table>
+<p>As observed from the table, in the forward mode AD, we are only working with elementary functions whose derivatives are known. therefore, it is trivial to calculate <span class="math notranslate nohighlight">\(D_pv_j\)</span></p>
+</section>
+<section id="reverse-mode">
+<h2>Reverse mode<a class="headerlink" href="#reverse-mode" title="Permalink to this heading">¶</a></h2>
+<p>The table below shows some major differences between the forward and the reverse mode:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 46%" />
+<col style="width: 54%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>forward mode</p></th>
+<th class="head"><p>reverse mode</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><ul class="simple">
+<li><p>evaluate the intermediate variable <span class="math notranslate nohighlight">\(v_j\)</span> and its directional derivative <span class="math notranslate nohighlight">\(D_pv_j\)</span> simultaneously</p></li>
+<li><p>m passes</p></li>
+<li><p>compute the gradient <span class="math notranslate nohighlight">\(f\)</span> with respect to the independent variables</p></li>
+<li><p>evaluate the function from inside out</p></li>
+<li><p>could use dual number</p></li>
+<li><p>have a larger computational count (usually in a factor of 5)</p></li>
+</ul>
+</td>
+<td><ul class="simple">
+<li><p>does NOT evaluate <span class="math notranslate nohighlight">\(v_j\)</span> and <span class="math notranslate nohighlight">\(D_pv_j\)</span> simultaneously (partial at forward pass but chained derivatives at reverse pass)</p></li>
+<li><p>2 passes</p></li>
+<li><p>compute the sensitivity <span class="math notranslate nohighlight">\(v_{j-m}\)</span> of <span class="math notranslate nohighlight">\(f\)</span> with respect to the independent AND intermediate variable <span class="math notranslate nohighlight">\(v_{j-m}\)</span></p></li>
+<li><p>traversing the computational graph backwards</p></li>
+<li><p>can NOT use dual number</p></li>
+<li><p>have to store the whole computational graph</p></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="dual-number">
+<h2>Dual number<a class="headerlink" href="#dual-number" title="Permalink to this heading">¶</a></h2>
+<p>A dual number, similar to a complex number, has a real part and a dual part: <span class="math notranslate nohighlight">\(z = a + b \epsilon\)</span>, where <span class="math notranslate nohighlight">\(\epsilon\)</span> is a high order term and we define <span class="math notranslate nohighlight">\(\epsilon^2=0\)</span>. Dual numbers are useful to encode the primal and the tangental traces. It is a useful data structure in carrying out the forward mode of autodifferentiation, since the function evaluation and directional derivative are calcualted simultaneously in the forward mode. For example, let <span class="math notranslate nohighlight">\(f\)</span> and <span class="math notranslate nohighlight">\(g\)</span> be two functions th <span class="math notranslate nohighlight">\(f\prime\)</span> and <span class="math notranslate nohighlight">\(g\prime\)</span> being their derivatives. We construct two dual numbers:</p>
+<div class="math notranslate nohighlight">
+\[z_1 = f + f\prime\epsilon\]</div>
+<div class="math notranslate nohighlight">
+\[z_2= g + g\prime\epsilon\]</div>
+<p>Therefore, we have:</p>
+<div class="math notranslate nohighlight">
+\[z_1 + z_2 = (f + g) + (f\prime + g\prime)\epsilon\]</div>
+<div class="math notranslate nohighlight">
+\[z_1 \cdot z_2 = (f \cdot g) + (f\cdot g\prime + g\cdot f\prime)\epsilon\]</div>
+<p>It can be observed that adding dual numbers together resembles the addition both for the evluation and the directional direvative parts. Similarly, the multiplication of dual numbers resemble the multiplication of the functions in the real part and the product rule of the directional derivative in the dual part. Therefore, it is a useful structure to encode the primal and the tangential traces.</p>
+</section>
+</section>
+<section id="pomeranian-installation">
+<h1>Pomeranian Installation<a class="headerlink" href="#pomeranian-installation" title="Permalink to this heading">¶</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">Pomeranian</span></code> package is distributed via <a class="reference external" href="https://pypi.org/">PyPI</a> (see <a class="reference external" href="https://test.pypi.org/project/pomeranian/">here</a> for the package).
+To install <code class="docutils literal notranslate"><span class="pre">Pomeranian</span></code>, use an installer program with the following code</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pip install -i https://test.pypi.org/simple/ pomeranian</span>
+</pre></div>
+</div>
+<p>All the extra dependencies (<code class="docutils literal notranslate"><span class="pre">numpy</span></code>) wil also be installed.</p>
+</section>
+<section id="how-to-use-pomeranian">
+<h1>How to use <code class="docutils literal notranslate"><span class="pre">Pomeranian</span></code><a class="headerlink" href="#how-to-use-pomeranian" title="Permalink to this heading">¶</a></h1>
+<p>After installation, the main forward mode, reverse mode, and elementary functions functionality can be imported using the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pomeranian.forward</span> <span class="kn">import</span> <span class="n">Forward</span>  <span class="c1"># main forward mode module</span>
+<span class="kn">from</span> <span class="nn">pomeranian.reverse</span> <span class="kn">import</span> <span class="n">Reverse</span>  <span class="c1"># main reverse mode module</span>
+<span class="kn">import</span> <span class="nn">pomeranian.elem_func</span> <span class="k">as</span> <span class="nn">func</span>     <span class="c1"># elementary function module</span>
+</pre></div>
+</div>
+<section id="define-function">
+<h2>Define Function<a class="headerlink" href="#define-function" title="Permalink to this heading">¶</a></h2>
+<p>The package is flexible and can handle univariate/multivariable inputs as well as single/multiple functions at the same time. Below we provide examples of multiple different cases to allow the user to pick the format that best suits their use case.</p>
+<ol class="arabic simple">
+<li><p>Single variable with single function to evaluate:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">f11</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">5</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Single variable with multiple functions to evaluate:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">f12</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">[</span><span class="n">x</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">5</span><span class="p">,</span> <span class="n">func</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="p">))]</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Multivariable with single function to evaluate:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">f21</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">func</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">y</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Multivariable with multiple functions to evaluate:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">f22</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="p">[</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">func</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">)]</span>
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h2>Forward Mode<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h2>
+<p>After the function(s) has been defined using any of the formats above, set a new variable as an instance of the <code class="docutils literal notranslate"><span class="pre">Forward</span></code> class. The package can be used to evaluate the value of a function at a given input using the <code class="docutils literal notranslate"><span class="pre">get_value()</span></code> function. The derivative/Jacobian can be accessed using the <code class="docutils literal notranslate"><span class="pre">forward()</span></code> function. Follow the example below to use our <code class="docutils literal notranslate"><span class="pre">Pomeranian</span></code> package.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pomeranian.forward</span> <span class="kn">import</span> <span class="n">Forward</span>
+<span class="kn">import</span> <span class="nn">pomeranian.elem_func</span> <span class="k">as</span> <span class="nn">func</span>
+
+<span class="c1"># univariate input, single function</span>
+<span class="n">ad11</span> <span class="o">=</span> <span class="n">Forward</span><span class="p">(</span><span class="n">f11</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad11</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="mf">3.55</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="mf">12.1</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad11</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="mf">3.55</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="mi">2</span>
+
+<span class="c1"># univariate input, multiple functions</span>
+<span class="n">ad12</span> <span class="o">=</span> <span class="n">Forward</span><span class="p">(</span><span class="n">f12</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad12</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="mf">3.55</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span><span class="mf">12.1</span>         <span class="mf">0.95130689</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad12</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="mf">3.55</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span> <span class="mf">2.</span>         <span class="o">-</span><span class="mf">0.08179983</span><span class="p">]</span>
+
+<span class="c1"># multivariate inputs, single function</span>
+<span class="n">ad21</span> <span class="o">=</span> <span class="n">Forward</span><span class="p">(</span><span class="n">f21</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad21</span><span class="o">.</span><span class="n">get_value</span><span class="p">([</span><span class="mf">3.55</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.38</span><span class="p">]))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="mf">1030.8098145221436</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad21</span><span class="o">.</span><span class="n">forward</span><span class="p">([</span><span class="mf">3.55</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.38</span><span class="p">]))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span><span class="mf">7318.74968311</span> <span class="mf">4906.65471713</span><span class="p">]</span>
+
+<span class="c1"># multivariate inputs, multiple functions</span>
+<span class="n">ad22</span> <span class="o">=</span> <span class="n">Forward</span><span class="p">(</span><span class="n">f22</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad22</span><span class="o">.</span><span class="n">get_value</span><span class="p">([</span><span class="mf">3.55</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.38</span><span class="p">]))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span><span class="mf">12.6025</span>      <span class="mf">0.15700375</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad22</span><span class="o">.</span><span class="n">forward</span><span class="p">([</span><span class="mf">3.55</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.38</span><span class="p">]))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[[</span><span class="mf">7.1</span>        <span class="mf">0.</span>        <span class="p">]</span>
+     <span class="p">[</span><span class="mf">0.85470085</span> <span class="mf">0.85470085</span><span class="p">]]</span>
+</pre></div>
+</div>
+</section>
+<section id="id5">
+<h2>Reverse Mode<a class="headerlink" href="#id5" title="Permalink to this heading">¶</a></h2>
+<p>Reverse mode are implemented so that the input and output formats are exactly the same as forward mode. To use reverse mode, simply replace the initialized class as an instance of <code class="docutils literal notranslate"><span class="pre">Reverse</span></code> class, and use <code class="docutils literal notranslate"><span class="pre">reverse()</span></code> function to access the Jacobian. Follow the example below to use our <code class="docutils literal notranslate"><span class="pre">Pomeranian</span></code> package.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pomeranian.forward</span> <span class="kn">import</span> <span class="n">Reverse</span>
+<span class="kn">import</span> <span class="nn">pomeranian.elem_func</span> <span class="k">as</span> <span class="nn">func</span>
+
+<span class="c1"># univariate input, single function</span>
+<span class="n">ad11</span> <span class="o">=</span> <span class="n">Reverse</span><span class="p">(</span><span class="n">f11</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad11</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="mf">3.55</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="mf">12.1</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad11</span><span class="o">.</span><span class="n">reverse</span><span class="p">(</span><span class="mf">3.55</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="mi">2</span>
+
+<span class="c1"># univariate input, multiple functions</span>
+<span class="n">ad12</span> <span class="o">=</span> <span class="n">Reverse</span><span class="p">(</span><span class="n">f12</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad12</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="mf">3.55</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span><span class="mf">12.1</span>         <span class="mf">0.95130689</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad12</span><span class="o">.</span><span class="n">reverse</span><span class="p">(</span><span class="mf">3.55</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span> <span class="mf">2.</span>         <span class="o">-</span><span class="mf">0.08179983</span><span class="p">]</span>
+
+<span class="c1"># multivariate inputs, single function</span>
+<span class="n">ad21</span> <span class="o">=</span> <span class="n">Reverse</span><span class="p">(</span><span class="n">f21</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad21</span><span class="o">.</span><span class="n">get_value</span><span class="p">([</span><span class="mf">3.55</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.38</span><span class="p">]))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="mf">1030.8098145221436</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad21</span><span class="o">.</span><span class="n">reverse</span><span class="p">([</span><span class="mf">3.55</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.38</span><span class="p">]))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span><span class="mf">7318.74968311</span> <span class="mf">4906.65471713</span><span class="p">]</span>
+
+<span class="c1"># multivariate inputs, multiple functions</span>
+<span class="n">ad22</span> <span class="o">=</span> <span class="n">Reverse</span><span class="p">(</span><span class="n">f22</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad22</span><span class="o">.</span><span class="n">get_value</span><span class="p">([</span><span class="mf">3.55</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.38</span><span class="p">]))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[</span><span class="mf">12.6025</span>      <span class="mf">0.15700375</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ad22</span><span class="o">.</span><span class="n">reverse</span><span class="p">([</span><span class="mf">3.55</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.38</span><span class="p">]))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[[</span><span class="mf">7.1</span>        <span class="mf">0.</span>        <span class="p">]</span>
+     <span class="p">[</span><span class="mf">0.85470085</span> <span class="mf">0.85470085</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>Note that if there are multivariate inputs and multiple functions, the Jacobian matrix are displayed in the following format:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}J =
+\begin{bmatrix}
+    \frac {\partial{f_1}}{\partial{x_1}} &amp; \frac {\partial{f_1}}{\partial{x_2}} &amp; \cdots &amp; \frac {\partial{f_1}}{\partial{x_m}} \\
+    \frac {\partial{f_2}}{\partial{x_1}} &amp; \frac {\partial{f_2}}{\partial{x_2}} &amp; \cdots &amp; \frac {\partial{f_2}}{\partial{x_m}} \\
+    \vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+    \frac {\partial{f_n}}{\partial{x_1}} &amp; \frac {\partial{f_n}}{\partial{x_2}} &amp; \cdots &amp; \frac {\partial{f_n}}{\partial{x_m}}
+\end{bmatrix}\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(n\)</span> is the number of functions, and <span class="math notranslate nohighlight">\(m\)</span> is the number of inputs.</p>
+<p>See <a class="reference internal" href="#implementation">Implementation</a> for more information about methods, and how <a class="reference internal" href="#multivariate-inputs-and-multiple-functions">Multivariate Inputs and Multiple Functions</a> are handled.</p>
+</section>
+</section>
+<section id="software-organization">
+<h1>Software Organization<a class="headerlink" href="#software-organization" title="Permalink to this heading">¶</a></h1>
+<section id="directory-structure">
+<h2>Directory structure<a class="headerlink" href="#directory-structure" title="Permalink to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>team11
+├── .gitignore
+├── LICENSE
+├── README.md
+├── requirements.txt
+│
+├── .github/workflows
+│   ├── coverage.yml
+│   └── test.yml
+│
+├── docs
+│   ├── pictures (milestone1, milestone2 pictures)
+│   ├── sphinx (final documentations)
+│   ├── README.md
+│   ├── milestone1.md
+│   ├── milestone1.pdf
+│   ├── milestone2.md
+│   ├── milestone2_progress.md
+│   └── ...
+│
+├── pomeranian
+│   ├── __init__.py
+│   ├── autodiff.py (AutoDiff base class)
+│   ├── dual.py (Dual class)
+│   ├── elem_func.py (ElementaryFunction module)
+│   ├── forward.py (Forward class)
+│   ├── node.py (Node class)
+│   ├── reverse.py (Reverse class)
+│   └── ...
+│
+├── tests
+│   ├── run_tests.sh (script to run test)
+│   ├── test_AutoDiff.py (tests for AutoDiff)
+│   ├── test_Dual.py (tests for Dual)
+│   ├── test_Elem.py (tests for ElementaryFunction)
+│   ├── test_FM.py (tests for Forward)
+│   ├── test_Node.py (tests for Node)
+│   ├── test_RM.py (tests for Reverse)
+│   └── ...
+│
+</pre></div>
+</div>
+</section>
+<section id="modules">
+<h2>Modules<a class="headerlink" href="#modules" title="Permalink to this heading">¶</a></h2>
+<p>There are four directories in the package</p>
+<ol class="arabic simple">
+<li><p>pomeranian: the main package containing all the modules/classes (including <code class="docutils literal notranslate"><span class="pre">Dual</span></code>, <code class="docutils literal notranslate"><span class="pre">Node</span></code>, <code class="docutils literal notranslate"><span class="pre">Forward</span></code>, <code class="docutils literal notranslate"><span class="pre">Reverse</span></code>, etc.) for AD; other dependencies (<code class="docutils literal notranslate"><span class="pre">numpy</span></code>) are also imported to facilitate structure and calculation</p></li>
+<li><p>tests: unit tests for pomeranian AD algorithms and functions</p></li>
+<li><p>docs: additional documents and milstones for project development</p></li>
+<li><p>.github/workflow (hidden): workflow configuration files</p></li>
+</ol>
+</section>
+<section id="test-suite-design">
+<h2>Test suite design<a class="headerlink" href="#test-suite-design" title="Permalink to this heading">¶</a></h2>
+<p>Test suite is included in the tests directory at the top level, which is the same level as the main package. Python built-in <code class="docutils literal notranslate"><span class="pre">pytest</span></code> are used to write test functions for each class separately. Github Actions is used as a CI process (in Github Enterprise) to automatically test code integration and document generation.</p>
+</section>
+<section id="distribution-considerations">
+<h2>Distribution &amp; Considerations<a class="headerlink" href="#distribution-considerations" title="Permalink to this heading">¶</a></h2>
+<p>As mentioned above, package is distributed via <a class="reference external" href="https://pypi.org/">PyPI</a>. Structure of the package is designed to be modular to optimize teamwork and collaboration, and minimize chances of merge conflicts.</p>
+</section>
+</section>
+<section id="implementation">
+<h1>Implementation<a class="headerlink" href="#implementation" title="Permalink to this heading">¶</a></h1>
+<section id="core-data-structures">
+<h2>Core Data Structures<a class="headerlink" href="#core-data-structures" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Function: A single function returns the function itself, multiple functions returns a list of functions (see <a class="reference internal" href="#define-function">Define Function</a>).</p></li>
+<li><p>Dual: Class, for use in forward mode AD</p></li>
+<li><p>Node: Class, for use in reverse mode AD</p></li>
+<li><p>Intermediate values, returned values, and partial derivatives to be stored in an np.arrays</p></li>
+</ul>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Dual</span></code>: dual number, represent a number and the derivative of the function at the number, for use in forward mode AD</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Node</span></code>: value, children, and associated local gradients, for use in reverse mode AD</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AutoDiff</span></code>: base class for AD</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Forward</span></code>: implements forward mode AD</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Reverse</span></code>: implements reverse mode AD</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ElementaryFunction</span></code> (module): includes other overloaded elementary functions (e.g., trig, log, exponential, etc.) that cannot be defined in <code class="docutils literal notranslate"><span class="pre">Dual</span></code> and <code class="docutils literal notranslate"><span class="pre">Node</span></code> class</p></li>
+</ul>
+</section>
+<section id="method-and-name-attributes">
+<h2>Method and Name Attributes<a class="headerlink" href="#method-and-name-attributes" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">Dual</span></code> class: for use in Forward</dt><dd><ul>
+<li><dl class="simple">
+<dt>Attributes:</dt><dd><ul>
+<li><p>self.real: real part of dual number, to calculate value <span class="math notranslate nohighlight">\(v_i\)</span> of function</p></li>
+<li><p>self.dual: dual part of dual number, to calculate value <span class="math notranslate nohighlight">\(D_p v_i\)</span></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Methods:</dt><dd><ul>
+<li><p>dunder methods overloaded (e.g. <em>__add__</em>, <em>__mul__</em>, <em>__sub__</em>, etc.; see <a class="reference internal" href="#implementation-example">Implementation Example</a> below for dunder method overloading)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">Node</span></code> class: for use in Reverse</dt><dd><ul>
+<li><dl class="simple">
+<dt>Attributes:</dt><dd><ul>
+<li><p>self.real: real value of function</p></li>
+<li><p>self.partial_derivs: the children Nodes and their partial derivatives for a given Node instance in tuple format</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Methods:</dt><dd><ul>
+<li><p>dunder methods overloaded (e.g. <em>__add__</em>, <em>__mul__</em>, <em>__sub__</em>, etc.; see <a class="reference internal" href="#implementation-example">Implementation Example</a> below for dunder method overloading)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">AutoDiff</span></code> base class:</dt><dd><ul>
+<li><dl class="simple">
+<dt>Attributes:</dt><dd><ul>
+<li><p>self.function: vector-valued input function</p></li>
+<li><p>self.n_inputs: number of variables in function(s)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Methods:</dt><dd><ul>
+<li><p>dunder methods overload (i.e., <em>__repr__</em>, <em>__str__</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">Forward</span></code> class (inherit AutoDiff):</dt><dd><ul>
+<li><dl class="simple">
+<dt>Attributes:</dt><dd><ul>
+<li><p>self.function: inherited from AutoDiff class</p></li>
+<li><p>self.n_inputs: inherited from AutoDiff class</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Methods:</dt><dd><ul>
+<li><p>_dual_forward: compute value and derivatives stored in Dual</p></li>
+<li><p>get_value: evaluate the value of function applied at input variables</p></li>
+<li><p>forward: calculate derivative/Jacobian of formula(s) by forward mode AD</p></li>
+<li><p>dunder methods overload (i.e., <em>__repr__</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">Reverse</span></code> class (inherit AutoDiff):</dt><dd><ul>
+<li><dl class="simple">
+<dt>Attributes:</dt><dd><ul>
+<li><p>self.function: inherited from AutoDiff class</p></li>
+<li><p>self.n_inputs: inherited from AutoDiff class</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Methods:</dt><dd><ul>
+<li><p>_gradiant: recursively compute derivatives at each children Nodes of root</p></li>
+<li><p>get_value: evaluate the value of function applied at input variables</p></li>
+<li><p>reverse: calculate derivative/Jacobian of function(s) by reverse mode AD</p></li>
+<li><p>dunder methods overload (i.e., <em>__repr__</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ElementaryFunction</span></code> module: includes other overloaded elementary functions (i.e., <code class="docutils literal notranslate"><span class="pre">sin()</span></code>, <code class="docutils literal notranslate"><span class="pre">cos()</span></code>, <code class="docutils literal notranslate"><span class="pre">tan()</span></code>, <code class="docutils literal notranslate"><span class="pre">exp()</span></code>, <code class="docutils literal notranslate"><span class="pre">sqrt()</span></code>, <code class="docutils literal notranslate"><span class="pre">log()</span></code>, <code class="docutils literal notranslate"><span class="pre">logb()</span></code>, <code class="docutils literal notranslate"><span class="pre">arcsin()</span></code>, <code class="docutils literal notranslate"><span class="pre">arccos()</span></code>, <code class="docutils literal notranslate"><span class="pre">arctan()</span></code>, <code class="docutils literal notranslate"><span class="pre">sinh()</span></code>, <code class="docutils literal notranslate"><span class="pre">cosh()</span></code>, <code class="docutils literal notranslate"><span class="pre">tanh()</span></code>, <code class="docutils literal notranslate"><span class="pre">logistic()</span></code>) that cannot be defined in <code class="docutils literal notranslate"><span class="pre">Dual</span></code> and <code class="docutils literal notranslate"><span class="pre">Node</span></code> class. See <a class="reference internal" href="#implementation-example">Implementation Example</a> below for elementary function overloading.</p></li>
+</ul>
+</section>
+<section id="implementation-example">
+<h2>Implementation Example<a class="headerlink" href="#implementation-example" title="Permalink to this heading">¶</a></h2>
+<p>We have implemented operator overloading in <code class="docutils literal notranslate"><span class="pre">Dual</span></code> class as in the following example (dunder <code class="docutils literal notranslate"><span class="pre">__add__</span></code> method):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="fm">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="n">real_part</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="n">other</span>
+        <span class="n">dual_part</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Dual</span><span class="p">):</span>
+        <span class="n">real_part</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">real</span>
+        <span class="n">dual_part</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">dual</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Input must be type float, int, or Dual&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dual</span><span class="p">(</span><span class="n">real_part</span><span class="p">,</span> <span class="n">dual_part</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We have implemented operator overloading in <code class="docutils literal notranslate"><span class="pre">Node</span></code> class as in the following example (dunder <code class="docutils literal notranslate"><span class="pre">__add__</span></code> method):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="fm">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Node</span><span class="p">):</span>
+        <span class="n">child</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partial_derivs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">child</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">other</span><span class="o">.</span><span class="n">partial_derivs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">child</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="n">child</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="n">other</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partial_derivs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">child</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Input must be of type float, int, or Node&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">child</span>
+</pre></div>
+</div>
+<p>We have implemented elementary function overloading as in the following example (<code class="docutils literal notranslate"><span class="pre">sin()</span></code>):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">sin</span><span class="p">(</span><span class="n">z</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">Dual</span><span class="p">):</span>
+        <span class="n">real_part</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+        <span class="n">dual_part</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">dual</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Dual</span><span class="p">(</span><span class="n">real_part</span><span class="p">,</span> <span class="n">dual_part</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">Node</span><span class="p">):</span>
+        <span class="n">child</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">real</span><span class="p">))</span>
+        <span class="n">z</span><span class="o">.</span><span class="n">partial_derivs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">child</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">real</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">child</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Input must be type float, int, Dual, or Node&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="multivariate-inputs-and-multiple-functions">
+<h2>Multivariate Inputs and Multiple Functions<a class="headerlink" href="#multivariate-inputs-and-multiple-functions" title="Permalink to this heading">¶</a></h2>
+<p>All multivariate inputs and functions are handled internally within <code class="docutils literal notranslate"><span class="pre">Forward</span></code> and <code class="docutils literal notranslate"><span class="pre">Reverse</span></code> class. As mentioned in the example, the user can input four different cases of function inputs, all of which share similar format.</p>
+<p>Regarding multivariate inputs (e.g., <span class="math notranslate nohighlight">\(\vec{x} = [x_1, x_2]\)</span>), the user needs to specify multiple input parameters for a single function.</p>
+<p>Regarding multiple functions (e.g., <span class="math notranslate nohighlight">\(\vec{f} = [f_1, f_2]\)</span>), the user need to return a single list with callable functions as the returned variable.</p>
+<p>For example, to call the function</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}f(x_1, x_2) =
+\begin{bmatrix}
+    x_1^2 \\
+    e^{x_1 + x_2}
+\end{bmatrix}\end{split}\]</div>
+<p>the user inputs the following codes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">f</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">:</span> <span class="p">[</span><span class="n">x1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">func</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x1</span> <span class="o">+</span> <span class="n">x2</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>When calling <code class="docutils literal notranslate"><span class="pre">get_value()</span></code>, <code class="docutils literal notranslate"><span class="pre">forward()</span></code>, and <code class="docutils literal notranslate"><span class="pre">reverse()</span></code> methods, the package will automatically convert all inputs to <code class="docutils literal notranslate"><span class="pre">Dual</span></code> (for forward mode) or <code class="docutils literal notranslate"><span class="pre">Node</span></code> (for reverse mode) internally and calculate the value and derivatives/Jacobian.</p>
+</section>
+<section id="external-dependencies">
+<h2>External Dependencies<a class="headerlink" href="#external-dependencies" title="Permalink to this heading">¶</a></h2>
+<p>Note that except for <code class="docutils literal notranslate"><span class="pre">numpy</span></code>, all others are python built-in packages that don’t need extra installation:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code>: data structure, elementary functions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">copy</span></code>: deep copy of Nodes to avoid overwrite</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inspect</span></code>: inspect the function source code when there are multiple functions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">re</span></code>: regex the source code to find the functions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">collections</span></code>: specifically, <code class="docutils literal notranslate"><span class="pre">defaultdict</span></code> is used to store and update Node and its corresponding chained gradiant calculated from <code class="docutils literal notranslate"><span class="pre">Node</span></code></p></li>
+</ul>
+</section>
+<section id="id7">
+<h2>Elementary Functions<a class="headerlink" href="#id7" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Elementary functions are defined in the <code class="docutils literal notranslate"><span class="pre">ElementaryFunction</span></code> class for both <code class="docutils literal notranslate"><span class="pre">Dual</span></code> and <code class="docutils literal notranslate"><span class="pre">Node</span></code> classes. We use existing modules <code class="docutils literal notranslate"><span class="pre">numpy</span></code> define functions for dual/node using operator overloading.</p></li>
+<li><p>Derivatives: Derivatives are handled by the operator overloading. For forward mode, derivatives are calculated using the self.dual part of the dual number. For reverse mode, self.partial_derivs stores the children Nodes and their partial derivatives for a given Node instance.</p></li>
+</ul>
+</section>
+</section>
+<section id="extension">
+<h1>Extension<a class="headerlink" href="#extension" title="Permalink to this heading">¶</a></h1>
+<p>We implemented <strong>Reverse Mode</strong> as the new extended feature.</p>
+<p>As specified in <a class="reference internal" href="#classes">Classes</a> and <a class="reference internal" href="#method-and-name-attributes">Method and Name Attributes</a>, reverse mode is implemented in <code class="docutils literal notranslate"><span class="pre">Reverse</span></code> class, which inherits <code class="docutils literal notranslate"><span class="pre">AutoDiff</span></code> base AD class. The <code class="docutils literal notranslate"><span class="pre">Node</span></code> class is used (similarly as <code class="docutils literal notranslate"><span class="pre">Dual</span></code> in forward mode) to store the real value and the children Nodes and their partial derivatives for a given Node instance in tuple format. Operator overloading is implemented in <code class="docutils literal notranslate"><span class="pre">Node</span></code> class, and elementary function overloading is implemented in <code class="docutils literal notranslate"><span class="pre">ElementaryFunction</span></code> module. <a class="reference internal" href="#multivariate-inputs-and-multiple-functions">Multivariate inputs and Multiple Functions</a> are dealt with the same as <code class="docutils literal notranslate"><span class="pre">Forward</span></code> mode. When calling <code class="docutils literal notranslate"><span class="pre">get_value()</span></code> and <code class="docutils literal notranslate"><span class="pre">reverse()</span></code> methods, the package automatically converts all inputs to <code class="docutils literal notranslate"><span class="pre">Node</span></code> numbers internally and calculates the value and derivatives.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Reverse</span></code> class is organized within the same directory of other main classes and modules. <code class="docutils literal notranslate"><span class="pre">Reverse</span></code> and <code class="docutils literal notranslate"><span class="pre">Node</span></code> are both tested repsectively using <code class="docutils literal notranslate"><span class="pre">pytest</span></code> in the test suite (see <a class="reference internal" href="#software-organization">Software Organization</a>).</p>
+</section>
+<section id="licensing">
+<h1>Licensing<a class="headerlink" href="#licensing" title="Permalink to this heading">¶</a></h1>
+<p>We license our program under an MIT License which is both simple and permissive. It allows any users to use, modify, or distribute the software without any associated liability for our team.</p>
+</section>
+<section id="broader-impact-and-inclusivity-statement">
+<h1>Broader Impact and Inclusivity Statement<a class="headerlink" href="#broader-impact-and-inclusivity-statement" title="Permalink to this heading">¶</a></h1>
+<section id="broader-impacts">
+<h2>Broader Impacts<a class="headerlink" href="#broader-impacts" title="Permalink to this heading">¶</a></h2>
+<p>A package such as pomeranian has substantial broader impacts with many potential societal benefits. However, this comes with great responsibility. The downstream applications have potential to be used in software that perpetuate social harms. For instance, existing recidivism algorithms are biased against Black defendants and social media algorithms amplify targeted misinformation; future applications of automatic differentiation software could be used to reinforce discriminatory practices.</p>
+<p>The question of how pomeranian should be used ethnically has no simple solution. As a start, the developers and users of software should include individuals from diverse backgrounds, and assess algorithmic bias at each stage (e.g., from data collection to model development in applications). Beyond technical solutions, engineers, data scientists, and all who interact with these systems should recognize this work occurs in the context of systems built on foundations of discrimination, and work towards building a more equitable, diverse, and inclusive community.</p>
+</section>
+<section id="inclusivity">
+<h2>Inclusivity<a class="headerlink" href="#inclusivity" title="Permalink to this heading">¶</a></h2>
+<p>In principle, software development should have no barriers based on sociodemographic characteristics. In practice, biases are baked into every step of this process. From institutional and interpersonal racism that contributes to persistent underrepresentation of people of color (particularly women of color), to biases that perpetuate stereotypes about “who looks like” an engineer/scientist, our field has immense systemic inequities. Simple statements such as “we welcome everyone, regardless of background” are insufficient to address the complex causes of persistent inequities in whose voices and contributions are valued in software development.</p>
+<p>We, the developers of pomeranian, are committed to working against systems of inequality through our research and teaching. Regarding development practices, we will advertise our software and invite contributions on a range of listservs/platforms to ensure dissemination to a broad audience. We will review and approve pull requests as a group with diverse backgrounds to carefully consider implications of new developments, and regularly seek feedback on the cultural climate of our group. In addition, we will engage in community-based outreach to foster excitement in computer science, particularly in historically underrepresented communities in STEM. We do not tolerate bias-motivated behaviors based on social group membership (e.g., race, ethnicity, gender, sexual orientation, disability, citizenship). Finally, we recognize these disparities cannot be solved by diversity initiatives at the software development stage alone, but require thoughtful and intentional restructuring of pedagogical practices at all levels (from elementary to graduate education), accompanied by activism and advocacy efforts within the broader community.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">Pomeranian</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Haoxue Fan, Sarah Rathnam, Mahnum Shahzad, Shirley Wang and Alaric Wei.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.3.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
